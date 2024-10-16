@@ -88,6 +88,51 @@ class DatabaseConnector:
             cursor.close()
             self.release_connection(conn)
 
+    def execute_and_return_stored_procedure(self, proc_name: str, *args: Any) -> Optional[List[Dict[str, Any]]]:
+        """Executes a stored procedure and returns the result if available."""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            param_placeholders = ", ".join(["?"] * len(args))
+            cursor.execute(f"EXEC {proc_name} {param_placeholders}", *args)
+
+            # Fetch result if it exists
+            if cursor.description:
+                columns = [col[0] for col in cursor.description]
+                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                return result or None
+            else:
+                cursor.commit()
+                return None
+        except pyodbc.Error as e:
+            print(f"Error executing stored procedure '{proc_name}': {e}")
+            conn.rollback()
+            raise
+        finally:
+            cursor.close()
+            self.release_connection(conn)
+
+    def execute_tvf_and_fetch_results(self, tvf_name: str, *parameters: Any) -> Optional[List[Dict[str, Any]]]:
+        """Executes a table-valued function (TVF) with optional parameters and returns the results."""
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            if parameters:
+                cursor.execute(f"SELECT * FROM {tvf_name}({','.join(['?'] * len(parameters))})", parameters)
+            else:
+                cursor.execute(f"SELECT * FROM {tvf_name}()")
+
+            if cursor.description:
+                columns = [col[0] for col in cursor.description]
+                result = [dict(zip(columns, row)) for row in cursor.fetchall()]
+                return result or None
+        except pyodbc.Error as e:
+            print(f"Error executing TVF '{tvf_name}': {e}")
+            return None
+        finally:
+            cursor.close()
+            self.release_connection(conn)
+
     def close(self) -> None:
         """Closes all connections in the pool."""
         while not self.pool.empty():
