@@ -17,13 +17,13 @@ jobs:
 
     services:
       sqlserver:
-        image: mcr.microsoft.com/mssql/server:2019-latest  # Use the official SQL Server image
+        image: mcr.microsoft.com/mssql/server:2019-latest  # Official SQL Server image
         ports:
           - 1433:1433
         env:
           SA_PASSWORD: "YourStrong@Password"
           ACCEPT_EULA: "Y"
-        options: --platform linux/amd64  # Ensure compatibility
+        options: --platform linux/amd64
 
     steps:
       # Step 1: Checkout the code
@@ -56,7 +56,12 @@ jobs:
             /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P "YourStrong@Password" -Q "SELECT 1" && break || sleep 2
           done
 
-      # Step 6: Run Tests
+      # Step 6: Run Database Setup Script
+      - name: Run Database Setup
+        run: |
+          /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P "YourStrong@Password" -i docker/setup.sql
+
+      # Step 7: Run Tests
       - name: Run Tests
         run: |
           poetry run pytest
