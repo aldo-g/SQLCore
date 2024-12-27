@@ -13,16 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10']  # List of Python versions to test
+        python-version: ['3.8', '3.9', '3.10']
+
     services:
       sqlserver:
-        image: your-dockerhub-username/sqlcore-sqlserver:latest  # Use your custom Docker image
+        image: mcr.microsoft.com/mssql/server:2019-latest  # Use the official SQL Server image
         ports:
           - 1433:1433
-        options: --platform linux/amd64
         env:
           SA_PASSWORD: "YourStrong@Password"
           ACCEPT_EULA: "Y"
+        options: --platform linux/amd64  # Ensure compatibility
 
     steps:
       # Step 1: Checkout the code
