@@ -1,22 +1,22 @@
-version: '3.8'
+version: "3.8"
 
 services:
   sqlserver:
     build:
-      context: ./docker
-      dockerfile: Dockerfile.db
+      context: .
+      dockerfile: docker/Dockerfile.db
     container_name: sqlcore_sqlserver
+    platform: linux/amd64
     ports:
       - "1433:1433"
     environment:
       SA_PASSWORD: "YourStrong@Password"
       ACCEPT_EULA: "Y"
-    volumes:
-      - ./docker/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    # No volume needed since we copied setup.sql into the image
     command: >
       /bin/bash -c "
       /opt/mssql/bin/sqlservr &
       sleep 30 &&
-      /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Password -i /docker-entrypoint-initdb.d/setup.sql &&
+      /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Password -i /tmp/setup.sql &&
       wait
       "
