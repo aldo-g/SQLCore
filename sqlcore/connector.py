@@ -40,8 +40,21 @@ class DatabaseConnector:
             # Close the connection if no pooling
             conn.close()
 
-    def execute_query(self, query: str, params: Optional[tuple] = None) -> Optional[List[Dict[str, Any]]]:
-        """Synchronously executes the given SQL query with optional parameters and returns the result as a list of dictionaries."""
+    def execute_query(self, query: str, params: Optional[tuple] = None) -> List[Dict[str, Any]]:
+        """
+        Synchronously executes the given SQL query with optional parameters and returns the result as a list of dictionaries.
+
+        Args:
+            query (str): The SQL query to execute.
+            params (Optional[tuple]): Parameters to pass to the query.
+
+        Returns:
+            List[Dict[str, Any]]: Query result as a list of dictionaries.
+
+        Raises:
+            ValueError: If the query fails or parameters are invalid.
+            pyodbc.Error: For any database-related errors.
+        """
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
@@ -49,76 +62,137 @@ class DatabaseConnector:
                 cursor.execute(query, params)
             else:
                 cursor.execute(query)
-            if cursor.description:
+
+            if cursor.description:  # Query returned rows
                 columns = [col[0] for col in cursor.description]
                 result = [dict(zip(columns, row)) for row in cursor.fetchall()]
-                return result or None
-            else:
+                return result
+            else:  # No rows returned, but query executed successfully
                 cursor.commit()
+                return []
+        except pyodbc.ProgrammingError as e:
+            raise ValueError(f"Query execution failed: {query}. Error: {str(e)}") from e
         except pyodbc.Error as e:
-            print(f"Error executing query: {e}")
-            return None
+            raise pyodbc.Error(f"Database error occurred: {str(e)}") from e
         finally:
             cursor.close()
             self.release_connection(conn)
-
+            
     def execute_stored_procedure(self, proc_name: str, *args: Any) -> None:
-        """Synchronously executes a stored procedure with the given name and parameters."""
+        """
+        Synchronously executes a stored procedure with the given name and parameters.
+
+        Args:
+            proc_name (str): The name of the stored procedure to execute.
+            args (Any): Parameters to pass to the stored procedure.
+
+        Raises:
+            ValueError: If the stored procedure execution fails due to an invalid name or parameters.
+            pyodbc.Error: For any database-related errors.
+        """
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
             param_placeholders = ", ".join(["?"] * len(args))
-            cursor.execute(f"EXEC {proc_name} {param_placeholders}", *args)
+            query = f"EXEC {proc_name} {param_placeholders}"
+
+            cursor.execute(query, *args)
             cursor.commit()
+        except pyodbc.ProgrammingError as e:
+            raise ValueError(
+                f"Stored procedure execution failed: '{proc_name}' with parameters {args}. Error: {str(e)}"
+            ) from e
         except pyodbc.Error as e:
-            print(f"Error executing stored procedure '{proc_name}': {e}")
-            conn.rollback()
-            raise
+            raise pyodbc.Error(
+                f"Database error while executing stored procedure: '{proc_name}' with parameters {args}. Error: {str(e)}"
+            ) from e
         finally:
             cursor.close()
             self.release_connection(conn)
 
-    def execute_and_return_stored_procedure(self, proc_name: str, *args: Any) -> Optional[List[Dict[str, Any]]]:
-        """Executes a stored procedure and returns the result if available."""
+    def execute_and_return_stored_procedure(self, proc_name: str, *args: Any) -> List[Dict[str, Any]]:
+        """
+        Executes a stored procedure and returns the result if available.
+
+        Args:
+            proc_name (str): The name of the stored procedure to execute.
+            args (Any): Parameters to pass to the stored procedure.
+
+        Returns:
+            List[Dict[str, Any]]: Result of the stored procedure as a list of dictionaries.
+
+        Raises:
+            ValueError: If the stored procedure execution fails due to an invalid name or parameters.
+            pyodbc.Error: For any database-related errors.
+        """
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
             param_placeholders = ", ".join(["?"] * len(args))
-            cursor.execute(f"EXEC {proc_name} {param_placeholders}", *args)
+            query = f"EXEC {proc_name} {param_placeholders}"
+
+            cursor.execute(query, *args)
 
             # Fetch result if it exists
-            if cursor.description:
+            if cursor.description:  # Results available
                 columns = [col[0] for col in cursor.description]
                 result = [dict(zip(columns, row)) for row in cursor.fetchall()]
-                return result or None
-            else:
+                return result
+            else:  # No results, but procedure executed successfully
                 cursor.commit()
-                return None
+                return []
+        except pyodbc.ProgrammingError as e:
+            raise ValueError(
+                f"Stored procedure execution failed: '{proc_name}' with parameters {args}. Error: {str(e)}"
+            ) from e
         except pyodbc.Error as e:
-            print(f"Error executing stored procedure '{proc_name}': {e}")
-            conn.rollback()
-            raise
+            raise pyodbc.Error(
+                f"Database error while executing stored procedure: '{proc_name}' with parameters {args}. Error: {str(e)}"
+            ) from e
         finally:
             cursor.close()
             self.release_connection(conn)
 
-    def execute_tvf_and_fetch_results(self, tvf_name: str, *parameters: Any) -> Optional[List[Dict[str, Any]]]:
-        """Executes a table-valued function (TVF) with optional parameters and returns the results."""
+    def execute_tvf_and_fetch_results(self, tvf_name: str, *parameters: Any) -> List[Dict[str, Any]]:
+        """
+        Executes a table-valued function (TVF) with optional parameters and returns the results.
+
+        Args:
+            tvf_name (str): The name of the table-valued function to execute.
+            parameters (Any): Parameters to pass to the TVF.
+
+        Returns:
+            List[Dict[str, Any]]: Results of the TVF as a list of dictionaries.
+
+        Raises:
+            ValueError: If the TVF execution fails due to an invalid name or parameters.
+            pyodbc.Error: For any database-related errors.
+        """
         conn = self.get_connection()
         try:
             cursor = conn.cursor()
             if parameters:
-                cursor.execute(f"SELECT * FROM {tvf_name}({','.join(['?'] * len(parameters))})", parameters)
+                param_placeholders = ",".join(["?"] * len(parameters))
+                query = f"SELECT * FROM {tvf_name}({param_placeholders})"
+                cursor.execute(query, parameters)
             else:
-                cursor.execute(f"SELECT * FROM {tvf_name}()")
+                query = f"SELECT * FROM {tvf_name}()"
+                cursor.execute(query)
 
-            if cursor.description:
+            if cursor.description:  # Results available
                 columns = [col[0] for col in cursor.description]
                 result = [dict(zip(columns, row)) for row in cursor.fetchall()]
-                return result or None
+                return result
+            else:  # No results, but TVF executed successfully
+                return []
+        except pyodbc.ProgrammingError as e:
+            raise ValueError(
+                f"TVF execution failed: '{tvf_name}' with parameters {parameters}. Error: {str(e)}"
+            ) from e
         except pyodbc.Error as e:
-            print(f"Error executing TVF '{tvf_name}': {e}")
-            return None
+            raise pyodbc.Error(
+                f"Database error while executing TVF: '{tvf_name}' with parameters {parameters}. Error: {str(e)}"
+            ) from e
         finally:
             cursor.close()
             self.release_connection(conn)
