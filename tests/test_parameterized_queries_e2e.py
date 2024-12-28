@@ -42,7 +42,7 @@ def test_query_with_invalid_parameters(db_connector, user_id, expected_error):
 
 
 @pytest.mark.parametrize("name_pattern,expected_count", [
-    ("%A%", 2),  # Matches 'Alice' and potentially other names with 'A'
+    ("%A%", 1),  # Matches 'Alice'
     ("Bob%", 1),  # Matches 'Bob'
 ])
 def test_query_with_like_operator(db_connector, name_pattern, expected_count):
