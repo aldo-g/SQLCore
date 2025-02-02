@@ -36,11 +36,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Step 3: Install Poetry
+      # Step 3: Install Poetry using the GitHub Action instead of curl
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          export PATH="$HOME/.local/bin:$PATH"
+        uses: snok/install-poetry@v1
+        with:
+          poetry-version: '2.0.1'  # or whichever version you wish to use
+
+      # (Optional) Step 3.1: Add Poetry to PATH (the action may already do this)
+      - name: Ensure Poetry is in PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       # Step 4: Install Dependencies
       - name: Install Dependencies
