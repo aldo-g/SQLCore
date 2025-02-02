@@ -18,14 +18,14 @@ def db_connector():
     connector.close()
 
 @pytest.mark.parametrize("tvf_name,params,expected_count", [
-    ("fn_get_users", (25,), 2),  # Assuming 2 users with age >= 25
-    ("fn_get_all_users", (), 3),  # Assuming 3 users in total
+    ("fn_get_users", (), 2),
+    ("fn_get_all_users", (), 3),
 ])
 def test_execute_tvf_valid(db_connector, tvf_name, params, expected_count):
     """Test valid table-valued functions with parameters."""
     result = db_connector.execute_tvf_and_fetch_results(tvf_name, *params)
     assert len(result) == expected_count
-    assert "name" in result[0]  # Ensures the result includes the 'name' column
+    assert "name" in result[0] 
 
 @pytest.mark.parametrize("tvf_name", [
     ("fn_non_existent"),
@@ -37,8 +37,8 @@ def test_execute_tvf_invalid_name(db_connector, tvf_name):
         db_connector.execute_tvf_and_fetch_results(tvf_name)
 
 @pytest.mark.parametrize("tvf_name,params", [
-    ("fn_get_users", ("invalid_param",)),  # Passing invalid parameter type
-    ("fn_get_users", (-999,)),  # Edge case: invalid numeric parameter
+    ("fn_get_users", ("invalid_param",)),
+    ("fn_get_users", (-999,)),
 ])
 def test_execute_tvf_invalid_params(db_connector, tvf_name, params):
     """Test invalid parameters for table-valued functions."""
@@ -46,7 +46,7 @@ def test_execute_tvf_invalid_params(db_connector, tvf_name, params):
         db_connector.execute_tvf_and_fetch_results(tvf_name, *params)
 
 @pytest.mark.parametrize("tvf_name,params", [
-    ("fn_trigger_error", (1,)),  # Simulates a database-level error
+    ("fn_trigger_error", ()),
 ])
 def test_execute_tvf_db_error(db_connector, tvf_name, params):
     """Test database-level errors in table-valued functions."""

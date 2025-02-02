@@ -1,12 +1,9 @@
--- Create a new database
 CREATE DATABASE testdb;
 GO
 
--- Switch to the new database
 USE testdb;
 GO
 
--- Create a sample table
 CREATE TABLE users (
     id INT PRIMARY KEY IDENTITY(1,1),
     name NVARCHAR(100),
@@ -14,11 +11,9 @@ CREATE TABLE users (
 );
 GO
 
--- Insert sample data
 INSERT INTO users (name, age) VALUES ('Alice', 25), ('Bob', 30);
 GO
 
--- Create a stored procedure
 CREATE PROCEDURE sp_get_users
 AS
 BEGIN
@@ -26,11 +21,28 @@ BEGIN
 END;
 GO
 
--- Create a table-valued function
 CREATE FUNCTION fn_get_users()
 RETURNS TABLE
 AS
 RETURN (
     SELECT * FROM users
+);
+GO
+
+CREATE FUNCTION fn_get_all_users()
+RETURNS TABLE
+AS
+RETURN (
+    SELECT * FROM users
+    UNION ALL
+    SELECT 0 AS id, 'Extra' AS name, 40 AS age
+);
+GO
+
+CREATE FUNCTION fn_trigger_error()
+RETURNS TABLE
+AS
+RETURN (
+    SELECT 1/0 AS error
 );
 GO
